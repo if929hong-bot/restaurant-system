@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>店長後台 - 餐廳管理系統</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: #f0f2f5;
+            transition: background 0.3s;
+        }
+        body.has-bg {
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            position: relative;
+        }
+        body.has-bg::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: -1;
+        }
+        .admin-wrapper { max-width: 1400px; margin: 0 auto; padding: 24px 20px; }
+        .top-bar {
+            background: white;
+            border-radius: 32px;
+            padding: 16px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+        }
+        .logo-area { display: flex; align-items: center; gap: 18px; }
+        .logo-area img { height: 54px; width: 54px; object-fit: cover; border-radius: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .restaurant-title { font-size: 1.6rem; font-weight: 700; background: linear-gradient(135deg, #ff6b35, #f7931e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .logout-btn:hover { background: #dc2626; transform: translateY(-2px); }
+        .tabs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+        .tab-btn { background: white; border: none; padding: 12px 28px; border-radius: 60px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.05); color: #4b5563; }
+        .tab-btn.active { background: #ff6b35; color: white; box-shadow: 0 8px 16px rgba(255,107,53,0.25); transform: translateY(-2px); }
+        .tab-pane { display: none; background: white; border-radius: 32px; padding: 28px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08); animation: fadeIn 0.3s ease; }
+        .tab-pane.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .form-card { background: #fefefe; border-radius: 28px; padding: 24px; margin-bottom: 32px; border: 1px solid #eef2f6; }
+        .form-card h3 { font-size: 1.4rem; margin-bottom: 20px; color: #1f2937; }
+        .form-group { margin-bottom: 20px; }
+        label { font-weight: 600; display: block; margin-bottom: 8px; color: #374151; }
+        input, select, textarea { width: 100%; padding: 12px 16px; border-radius: 28px; border: 1px solid #e2e8f0; font-size: 0.95rem; background: #fafcff; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255,107,53,0.15); }
+        button { background: #ff6b35; color: white; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button.secondary { background: #6c757d; }
+        button.success { background: #10b981; }
+        button.danger { background: #ef4444; }
+        button.small { padding: 6px 16px; font-size: 0.8rem; }
+        button:hover { transform: translateY(-1px); filter: brightness(1.02); }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .data-table th { background: #f8fafc; padding: 14px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        .data-table td { padding: 14px 12px; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.75rem; font-weight: 600; }
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-accepted { background: #dbeafe; color: #2563eb; }
+        .status-completed { background: #d1fae5; color: #059669; }
+        .status-cancelled { background: #fee2e2; color: #dc2626; }
+        .bank-info-box { background: #f0f9ff; padding: 20px; border-radius: 24px; border-left: 6px solid #ff6b35; white-space: pre-wrap; }
+        .flex-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .flex-row > * { flex: 1; }
+        @media (max-width: 768px) { .admin-wrapper { padding: 16px; } .top-bar { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; } .logo-area { justify-content: center; } .tab-btn { padding: 8px 18px; font-size: 0.85rem; } .flex-row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<div class="admin-wrapper">
+    <div class="top-bar">
+        <div class="logo-area">
+            <img id="previewLogo" src="https://via.placeholder.com/54" alt="Logo">
+            <span class="restaurant-title" id="storeNameDisplay">餐廳名稱</span>
+        </div>
+        <button class="logout-btn" id="logoutBtn">登出</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="settings">🏪 店鋪設定</button>
+        <button class="tab-btn" data-tab="menu">📋 菜單管理</button>
+        <button class="tab-btn" data-tab="orders">📦 訂單 & 營業額</button>
+        <button class="tab-btn" data-tab="subusers">👥 子帳號</button>
+        <button class="tab-btn" data-tab="bank">🏦 銀行 & 繳費紀錄</button>
+    </div>
+
+    <!-- 店鋪設定 -->
+    <div id="settingsPane" class="tab-pane active">
+        <div class="form-card">
+            <h3>📸 店家基本資料</h3>
+            <div class="form-group"><label>餐廳 Logo (圖片網址)</label><input type="text" id="logoUrl" placeholder="https://..."></div>
+            <div class="form-group"><label>餐廳名稱</label><input type="text" id="restaurantName" placeholder="我的美味餐廳"></div>
+            <div class="form-group"><label>背景圖片 (固定背景)</label><input type="text" id="bgImageUrl" placeholder="https://..."></div>
+            <div class="form-group"><label>地圖連結 (Google Maps URL)</label><input type="text" id="mapUrl" placeholder="https://maps.google.com/..."></div>
+            <div class="form-group"><label>聯絡電話</label><input type="text" id="phone" placeholder="02-12345678"></div>
+            <div class="form-group"><label>LINE@ 連結</label><input type="text" id="lineUrl" placeholder="https://line.me/R/ti/p/@example"></div>
+            <button id="saveSettingsBtn">💾 儲存設定</button>
+        </div>
+    </div>
+
+    <!-- 菜單管理（簡化：只有價格，無規格） -->
+    <div id="menuPane" class="tab-pane">
+        <div class="form-card">
+            <h3>➕ 新增菜色</h3>
+            <div class="flex-row">
+                <input type="text" id="newItemName" placeholder="菜名 *">
+                <input type="number" id="newItemPrice" placeholder="價格 *">
+                <input type="text" id="newItemImage" placeholder="圖片網址 (可不填)">
+                <input type="text" id="newItemCategory" placeholder="分類">
+            </div>
+            <div class="form-group">
+                <label>簡介</label>
+                <textarea id="newItemDesc" rows="2" placeholder="簡介"></textarea>
+            </div>
+            <button id="addMenuItemBtn">✨ 新增菜品</button>
+        </div>
+        <div class="form-card">
+            <h3>📌 現有菜單</h3>
+            <table class="data-table">
+                <thead><tr><th>圖片</th><th>菜名</th><th>價格</th><th>分類</th><th>狀態</th><th>操作</th></tr></thead>
+                <tbody id="menuTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 訂單管理 & 營業額 -->
+    <div id="ordersPane" class="tab-pane">
+        <div class="form-card">
+            <h3>📊 今日營業額</h3>
+            <div id="dailySales" style="font-size:2rem; font-weight:800; color:#ff6b35;">NT$ 0</div>
+            <button id="refreshSalesBtn" class="secondary">🔄 重新計算</button>
+        </div>
+        <div class="form-card">
+            <h3>📋 所有訂單</h3>
+            <select id="orderStatusFilter" style="width:auto; margin-bottom:16px;">
+                <option value="all">全部狀態</option>
+                <option value="pending">待處理</option>
+                <option value="accepted">已接單</option>
+                <option value="completed">已完成</option>
+                <option value="cancelled">已取消</option>
+            </select>
+            <table class="data-table">
+                <thead><tr><th>編號</th><th>顧客</th><th>電話</th><th>品項</th><th>總金額</th><th>狀態</th><th>備註</th><th>時間</th><th>操作</th></tr></thead>
+                <tbody id="orderTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 子帳號管理 -->
+    <div id="subusersPane" class="tab-pane">
+        <div class="form-card">
+            <h3>👥 新增子帳號 (最多3個，僅可查看)</h3>
+            <div class="flex-row">
+                <input type="text" id="subUsername" placeholder="帳號">
+                <input type="password" id="subPassword" placeholder="密碼">
+                <button id="createSubUserBtn">建立子帳號</button>
+            </div>
+        </div>
+        <div class="form-card">
+            <h3>📋 現有子帳號</h3>
+            <table class="data-table">
+                <thead><tr><th>用戶名</th><th>建立時間</th><th>操作</th></tr></thead>
+                <tbody id="subuserList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 銀行資訊 & 繳費紀錄 -->
+    <div id="bankPane" class="tab-pane">
+        <div class="form-card">
+            <h3>🏦 匯款資訊 (由超管設定)</h3>
+            <div class="bank-info-box" id="bankInfoContent">載入中...</div>
+        </div>
+        <div class="form-card">
+            <h3>💰 繳費紀錄</h3>
+            <div style="background:#f8fafc; border-radius:24px; padding:20px; margin-bottom:24px;">
+                <h4>📝 新增繳費紀錄</h4>
+                <div class="flex-row">
+                    <input type="date" id="paymentDate">
+                    <input type="number" id="paymentAmount" placeholder="金額">
+                    <input type="text" id="paymentLast5" placeholder="帳號後五碼" maxlength="5">
+                    <button id="addPaymentBtn">新增紀錄</button>
+                </div>
+            </div>
+            <h4>📜 繳費紀錄列表</h4>
+            <table class="data-table">
+                <thead><tr><th>日期</th><th>金額</th><th>帳號後五碼</th><th>狀態</th><th>送出時間</th><th>確認時間</th></tr></thead>
+                <tbody id="paymentRecordsList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let authToken = localStorage.getItem('authToken');
+    let currentUserRole = localStorage.getItem('userRole');
+
+    if (!authToken) {
+        const username = prompt('請輸入店長帳號');
+        const password = prompt('請輸入密碼');
+        if (username && password) login(username, password);
+        else window.location.href = '/login.html';
+    } else { verifyToken(); }
+
+    async function login(username, password) {
+        try {
+            const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            if (!res.ok) throw new Error('登入失敗');
+            const data = await res.json();
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('userRole', data.user.role);
+            localStorage.setItem('userId', data.user.id);
+            window.location.reload();
+        } catch (err) { alert('登入失敗: ' + err.message); window.location.href = '/login.html'; }
+    }
+
+    async function verifyToken() {
+        try {
+            const res = await fetch('/api/manager/settings', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            if (!res.ok) throw new Error(`驗證失敗 (${res.status})`);
+            await loadStoreSettings();
+            await loadMenu();
+            await loadOrders();
+            await loadDailySales();
+            await loadSubUsers();
+            await loadBankInfo();
+            await loadPayments();
+            attachEventListeners();
+        } catch (err) { console.error(err); alert('載入失敗: ' + err.message); }
+    }
+
+    async function loadStoreSettings() {
+        const res = await fetch('/api/manager/settings', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        document.getElementById('logoUrl').value = data.logo_url || '';
+        document.getElementById('restaurantName').value = data.restaurant_name || '';
+        document.getElementById('bgImageUrl').value = data.background_image_url || '';
+        document.getElementById('mapUrl').value = data.map_url || '';
+        document.getElementById('phone').value = data.phone || '';
+        document.getElementById('lineUrl').value = data.line_url || '';
+        if (data.logo_url) document.getElementById('previewLogo').src = data.logo_url;
+        if (data.restaurant_name) document.getElementById('storeNameDisplay').innerText = data.restaurant_name;
+        if (data.background_image_url) { document.body.style.backgroundImage = `url('${data.background_image_url}')`; document.body.classList.add('has-bg'); }
+    }
+
+    async function saveStoreSettings() {
+        const logo_url = document.getElementById('logoUrl').value;
+        const restaurant_name = document.getElementById('restaurantName').value;
+        const background_image_url = document.getElementById('bgImageUrl').value;
+        const map_url = document.getElementById('mapUrl').value;
+        const phone = document.getElementById('phone').value;
+        const line_url = document.getElementById('lineUrl').value;
+        const res = await fetch('/api/manager/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ logo_url, restaurant_name, background_image_url, map_url, phone, line_url })
+        });
+        if (res.ok) { alert('✅ 已儲存'); location.reload(); } else alert('儲存失敗');
+    }
+
+    // 菜單管理（無規格）
+    async function loadMenu() {
+        const res = await fetch('/api/manager/menu', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const items = await res.json();
+        const tbody = document.getElementById('menuTableBody');
+        tbody.innerHTML = '';
+        items.forEach(item => {
+            // 價格顯示：若有 size_options 則顯示「依規格」，但我們不再使用規格，所以直接顯示 price
+            let priceDisplay = `NT$ ${item.price}`;
+            const imgHtml = item.image_url ? `<img src="${item.image_url}" style="width:50px;height:50px;object-fit:cover;border-radius:12px;">` : '無圖片';
+            const row = `<tr>
+                <td>${imgHtml}</td>
+                <td><strong>${escapeHtml(item.name)}</strong>}),
+                <td>${priceDisplay}</td>
+                <td>${escapeHtml(item.category || '')}</td>
+                <td>${item.is_available ? '✅ 上架' : '⛔ 下架'}</td>
+                <td><button class="small delete-item" data-id="${item.id}">刪除</button> <button class="small toggle-item" data-id="${item.id}" data-available="${item.is_available}">${item.is_available ? '下架' : '上架'}</button></td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+        document.querySelectorAll('.delete-item').forEach(btn => btn.addEventListener('click', deleteMenuItem));
+        document.querySelectorAll('.toggle-item').forEach(btn => btn.addEventListener('click', toggleMenuItem));
+    }
+
+    async function addMenuItem() {
+        const name = document.getElementById('newItemName').value.trim();
+        const price = parseFloat(document.getElementById('newItemPrice').value);
+        const image_url = document.getElementById('newItemImage').value.trim();
+        const category = document.getElementById('newItemCategory').value.trim();
+        const description = document.getElementById('newItemDesc').value.trim();
+        if (!name || isNaN(price)) { alert('請填寫菜名和價格'); return; }
+        const res = await fetch('/api/manager/menu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ name, price, image_url, category, description, size_options: null })
+        });
+        if (res.ok) { alert('新增成功'); loadMenu(); document.getElementById('newItemName').value = ''; document.getElementById('newItemPrice').value = ''; document.getElementById('newItemImage').value = ''; document.getElementById('newItemCategory').value = ''; document.getElementById('newItemDesc').value = ''; }
+        else alert('新增失敗');
+    }
+
+    async function deleteMenuItem(e) {
+        const id = e.target.dataset.id;
+        if (!confirm('確定刪除此菜色？')) return;
+        const res = await fetch(`/api/manager/menu/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (res.ok) { alert('已刪除'); loadMenu(); } else alert('刪除失敗');
+    }
+
+    async function toggleMenuItem(e) {
+        const id = e.target.dataset.id;
+        const current = e.target.dataset.available === '1';
+        const newStatus = current ? 0 : 1;
+        const resGet = await fetch('/api/manager/menu', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const items = await resGet.json();
+        const item = items.find(i => i.id == id);
+        if (!item) return;
+        const res = await fetch(`/api/manager/menu/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ ...item, is_available: newStatus })
+        });
+        if (res.ok) loadMenu(); else alert('更新失敗');
+    }
+
+    async function loadOrders() {
+        const res = await fetch('/api/manager/orders', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        let orders = await res.json();
+        const filter = document.getElementById('orderStatusFilter').value;
+        if (filter !== 'all') orders = orders.filter(o => o.status === filter);
+        const tbody = document.getElementById('orderTableBody');
+        tbody.innerHTML = '';
+        orders.forEach(order => {
+            const itemsShort = order.items.map(i => `${i.name} x${i.quantity}`).join(', ');
+            const canUpdate = (currentUserRole === 'manager' && order.status !== 'completed' && order.status !== 'cancelled');
+            const statusClass = `status-${order.status}`;
+            const statusText = {pending:'待處理', accepted:'已接單', completed:'已完成', cancelled:'已取消'}[order.status];
+            const row = `<tr>
+                <td>#${order.id}</td>
+                <td>${escapeHtml(order.customer_name)}</td> <td>${order.customer_phone}</td>
+                <td>${itemsShort.substring(0,60)}</td> <td>NT$ ${order.total_amount}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>${escapeHtml(order.note || '')}</td>
+                <td>${new Date(order.created_at).toLocaleString()}</td>
+                <td>${canUpdate ? `<select class="status-select" data-id="${order.id}"><option value="accepted">接單</option><option value="completed">完成</option><option value="cancelled">取消</option></select><button class="small update-status">更新</button>` : '無權限'} </td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+        document.querySelectorAll('.update-status').forEach(btn => btn.addEventListener('click', updateOrderStatus));
+    }
+
+    async function updateOrderStatus(e) {
+        const row = e.target.closest('tr');
+        const select = row.querySelector('.status-select');
+        const orderId = select.dataset.id;
+        const newStatus = select.value;
+        const res = await fetch(`/api/manager/orders/${orderId}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ status: newStatus }) });
+        if (res.ok) { alert('狀態已更新'); loadOrders(); loadDailySales(); } else alert('更新失敗');
+    }
+
+    async function loadDailySales() {
+        const res = await fetch('/api/manager/daily-sales', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        document.getElementById('dailySales').innerHTML = `NT$ ${data.total} <small style="font-size:0.9rem;">(${data.date})</small>`;
+    }
+
+    async function loadSubUsers() {
+        if (currentUserRole !== 'manager') { document.getElementById('subusersPane').innerHTML = '<div class="form-card">🔒 僅店長可管理子帳號</div>'; return; }
+        const res = await fetch('/api/manager/subusers', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const users = await res.json();
+        const tbody = document.getElementById('subuserList');
+        tbody.innerHTML = '';
+        users.forEach(u => { const row = `<tr><td>${escapeHtml(u.username)}</td> <td>${new Date(u.created_at).toLocaleString()}</td><td><button class="small danger del-subuser" data-id="${u.id}">刪除</button></tr>`; tbody.insertAdjacentHTML('beforeend', row); });
+        document.querySelectorAll('.del-subuser').forEach(btn => btn.addEventListener('click', deleteSubUser));
+    }
+
+    async function createSubUser() {
+        const username = document.getElementById('subUsername').value;
+        const password = document.getElementById('subPassword').value;
+        if (!username || !password) return alert('請填寫完整');
+        const res = await fetch('/api/manager/subusers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ username, password }) });
+        if (res.ok) { alert('子帳號建立成功'); loadSubUsers(); } else alert('建立失敗');
+    }
+
+    async function deleteSubUser(e) {
+        const id = e.target.dataset.id;
+        if (!confirm('確定刪除子帳號？')) return;
+        const res = await fetch(`/api/manager/subusers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (res.ok) loadSubUsers(); else alert('刪除失敗');
+    }
+
+    async function loadBankInfo() {
+        const res = await fetch('/api/manager/bank-info', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        document.getElementById('bankInfoContent').innerText = data.bank_info || '無銀行資訊';
+    }
+
+    async function loadPayments() {
+        const res = await fetch('/api/manager/payments', { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const records = await res.json();
+        const tbody = document.getElementById('paymentRecordsList');
+        tbody.innerHTML = '';
+        records.forEach(rec => {
+            const statusText = rec.status === 'pending' ? '待確認' : '已收款';
+            const row = `<tr>
+                <td>${rec.date}</td>
+                <td>NT$ ${rec.amount}</td>
+                <td>${rec.account_last5}</td>
+                <td>${statusText}</td>
+                <td>${new Date(rec.created_at).toLocaleString()}</td>
+                <td>${rec.confirmed_at ? new Date(rec.confirmed_at).toLocaleString() : '-'}</td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    async function addPayment() {
+        const date = document.getElementById('paymentDate').value;
+        const amount = parseFloat(document.getElementById('paymentAmount').value);
+        const last5 = document.getElementById('paymentLast5').value.trim();
+        if (!date || isNaN(amount) || !last5) { alert('請完整填寫'); return; }
+        const res = await fetch('/api/manager/payments', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ date, amount, account_last5: last5 }) });
+        if (res.ok) { alert('新增成功'); document.getElementById('paymentDate').value = ''; document.getElementById('paymentAmount').value = ''; document.getElementById('paymentLast5').value = ''; loadPayments(); } else alert('新增失敗');
+    }
+
+    function attachEventListeners() {
+        document.getElementById('saveSettingsBtn').addEventListener('click', saveStoreSettings);
+        document.getElementById('addMenuItemBtn').addEventListener('click', addMenuItem);
+        document.getElementById('refreshSalesBtn').addEventListener('click', loadDailySales);
+        document.getElementById('createSubUserBtn').addEventListener('click', createSubUser);
+        document.getElementById('orderStatusFilter').addEventListener('change', loadOrders);
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/login.html'; });
+        document.getElementById('addPaymentBtn').addEventListener('click', addPayment);
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+                document.getElementById(`${tabId}Pane`).classList.add('active');
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+</script>
+</body>
+</html>

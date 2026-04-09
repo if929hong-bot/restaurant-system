@@ -1,0 +1,19 @@
+{
+  "name": "restaurant-order-system",
+  "version": "2.0.0",
+  "description": "点餐系统 - 超级管理员、店长后台、顾客点餐前端，支持店长自注册、菜单规格、固定背景、子账号授权等",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "init-db": "node init-db.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "sqlite3": "^6.0.1"
+  }
+}

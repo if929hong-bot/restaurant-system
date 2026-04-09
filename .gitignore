@@ -1,0 +1,24 @@
+# 依賴套件
+node_modules/
+
+# 資料庫檔案
+*.db
+*.db-journal
+
+# 環境變數
+.env
+
+# 日誌檔案
+*.log
+npm-debug.log*
+
+# 作業系統檔案
+.DS_Store
+Thumbs.db
+
+# IDE 設定（選擇性）
+.vscode/
+.idea/
+
+# 暫存檔案
+*.tmp

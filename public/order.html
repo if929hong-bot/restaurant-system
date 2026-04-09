@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>線上點餐 | 美食外送</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Noto Sans TC', 'PingFang TC', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* 固定背景（若有店長設定背景圖則覆蓋） */
+        .bg-fixed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            z-index: -2;
+        }
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: -1;
+        }
+
+        /* 主要內容容器 */
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 16px 100px 16px;
+            position: relative;
+        }
+
+        /* 店頭資訊卡 */
+        .store-card {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(10px);
+            border-radius: 48px;
+            padding: 24px 20px;
+            margin-bottom: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .store-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            margin-bottom: 12px;
+        }
+        .store-name {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: #2d2f36;
+            margin-bottom: 8px;
+            letter-spacing: -0.3px;
+        }
+        .contact-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0f2f5;
+            padding: 10px 20px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+            color: #1f2937;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .contact-btn i { font-style: normal; font-weight: bold; }
+        .contact-btn:hover {
+            background: #ff6b35;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* 分類標籤 */
+        .category-tabs {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 8px 4px 16px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+        .category-chip {
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(4px);
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .category-chip.active {
+            background: #ff6b35;
+            color: white;
+            box-shadow: 0 4px 10px rgba(255,107,53,0.3);
+        }
+
+        /* 菜單網格 */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+            margin-top: 8px;
+        }
+        .menu-card {
+            background: white;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        .menu-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 30px -12px rgba(0,0,0,0.2);
+        }
+        .menu-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #e9ecef;
+        }
+        .menu-info {
+            padding: 18px;
+        }
+        .menu-name {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .menu-desc {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        .size-selector {
+            margin: 12px 0;
+        }
+        .size-selector select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 30px;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            font-weight: 500;
+        }
+        .price {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ff6b35;
+            margin: 10px 0;
+        }
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .qty-btn {
+            background: #f1f3f5;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .qty-btn:active { transform: scale(0.95); }
+        .qty-input {
+            width: 55px;
+            text-align: center;
+            font-size: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 30px;
+            padding: 6px 0;
+        }
+        .add-to-cart {
+            width: 100%;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+        .add-to-cart:hover {
+            background: #e55a2b;
+            transform: scale(1.01);
+        }
+
+        /* 浮動購物車按鈕 */
+        .cart-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #ff6b35;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            cursor: pointer;
+            z-index: 1000;
+            border: none;
+            transition: 0.2s;
+        }
+        .cart-fab span {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        /* 側邊購物車 */
+        .cart-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 380px;
+            height: 100%;
+            background: white;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+            transform: translateX(100%);
+            transition: 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            border-radius: 32px 0 0 32px;
+            overflow-y: auto;
+        }
+        .cart-sidebar.open {
+            transform: translateX(0);
+        }
+        .cart-header {
+            padding: 24px;
+            background: #ff6b35;
+            color: white;
+            font-weight: bold;
+            font-size: 1.4rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .cart-items {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .cart-item-info strong { display: block; }
+        .cart-item-price { color: #ff6b35; font-weight: 600; }
+        .remove-item {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #e74c3c;
+        }
+        .cart-total {
+            padding: 20px;
+            background: #f8fafc;
+            font-size: 1.3rem;
+            font-weight: 800;
+            text-align: right;
+            border-top: 2px solid #e2e8f0;
+        }
+        .checkout-form {
+            padding: 20px;
+        }
+        .checkout-form input, .checkout-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+        }
+        .submit-order {
+            background: #28a745;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        .close-cart {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        @media (max-width: 600px) {
+            .cart-sidebar { width: 100%; border-radius: 0; }
+            .menu-grid { grid-template-columns: 1fr; }
+            .store-name { font-size: 1.5rem; }
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.2rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+<div id="bgFixed" class="bg-fixed" style="background-image: url('https://picsum.photos/id/104/1920/1080');"></div>
+<div class="bg-overlay"></div>
+
+<div class="app-container">
+    <div class="store-card" id="storeHeader">
+        <img id="storeLogo" class="store-logo" src="" alt="Logo">
+        <div class="store-name" id="restaurantName">美味食堂</div>
+        <div class="contact-buttons">
+            <a href="#" id="mapLink" class="contact-btn" target="_blank">📍 地圖</a>
+            <a href="#" id="telLink" class="contact-btn">📞 電話</a>
+            <a href="#" id="lineLink" class="contact-btn" target="_blank">💬 LINE@</a>
+        </div>
+    </div>
+
+    <div class="category-tabs" id="categoryTabs"></div>
+    <div id="menuContainer" class="menu-grid"><div class="loading">載入美味菜單...</div></div>
+</div>
+
+<button class="cart-fab" id="cartFab">
+    🛒 <span id="cartCountBadge">0</span>
+</button>
+
+<div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+        <span>我的訂單</span>
+        <button class="close-cart" id="closeCartBtn">✕</button>
+    </div>
+    <div class="cart-items" id="cartItemsList"></div>
+    <div class="cart-total">總計 NT$ <span id="cartTotalAmount">0</span></div>
+    <div class="checkout-form">
+        <input type="text" id="customerName" placeholder="姓名 *" required>
+        <input type="tel" id="customerPhone" placeholder="電話 *" required>
+        <textarea id="orderNote" rows="2" placeholder="備註 (辣度、餐具等)"></textarea>
+        <button class="submit-order" id="submitOrderBtn">送出訂單</button>
+    </div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    let storeUsername = urlParams.get('store') || 'demo_restaurant';
+    let storeInfo = { managerId: null };
+    let menuItems = [];
+    let cart = [];
+
+    // 載入店家資訊與背景、地圖、電話、LINE
+    async function fetchStoreInfo() {
+        try {
+            const res = await fetch(`/api/store-info/${storeUsername}`);
+            if (!res.ok) throw new Error('店家不存在');
+            const data = await res.json();
+            storeInfo = data;
+            if (data.background_image_url) {
+                document.getElementById('bgFixed').style.backgroundImage = `url('${data.background_image_url}')`;
+            }
+            document.getElementById('storeLogo').src = data.logo_url || 'https://via.placeholder.com/100?text=Logo';
+            document.getElementById('restaurantName').innerText = data.restaurant_name || storeUsername;
+            // 設定地圖、電話、LINE 連結（使用店長設定的值）
+            if (data.map_url) document.getElementById('mapLink').href = data.map_url;
+            if (data.phone) document.getElementById('telLink').href = `tel:${data.phone}`;
+            if (data.line_url) document.getElementById('lineLink').href = data.line_url;
+            return data.id;
+        } catch (err) {
+            console.error(err);
+            alert('無法讀取店家資料');
+            return null;
+        }
+    }
+
+    async function fetchMenu() {
+        try {
+            const res = await fetch(`/api/menu/${storeUsername}`);
+            if (!res.ok) throw new Error('菜單載入失敗');
+            const data = await res.json();
+            menuItems = data.items || [];
+            renderCategories();
+            renderMenu();
+        } catch (err) {
+            document.getElementById('menuContainer').innerHTML = '<div class="loading">⚠️ 菜單讀取失敗</div>';
+        }
+    }
+
+    let activeCategory = '全部';
+    function renderCategories() {
+        const cats = ['全部', ...new Set(menuItems.map(item => item.category || '其他'))];
+        const container = document.getElementById('categoryTabs');
+        container.innerHTML = cats.map(cat => `
+            <div class="category-chip ${cat === activeCategory ? 'active' : ''}" data-cat="${cat}">${cat}</div>
+        `).join('');
+        document.querySelectorAll('.category-chip').forEach(el => {
+            el.addEventListener('click', (e) => {
+                activeCategory = el.dataset.cat;
+                renderCategories();
+                renderMenu();
+            });
+        });
+    }
+
+    function renderMenu() {
+        const container = document.getElementById('menuContainer');
+        let filtered = menuItems;
+        if (activeCategory !== '全部') {
+            filtered = menuItems.filter(item => (item.category || '其他') === activeCategory);
+        }
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="loading">暫無此分類餐點</div>';
+            return;
+        }
+        container.innerHTML = '';
+        filtered.forEach(item => {
+            const sizeOptions = item.size_options ? JSON.parse(item.size_options) : {};
+            const hasSize = Object.keys(sizeOptions).length > 0;
+            let defaultSizeKey = '';
+            let defaultPrice = item.price;
+            if (hasSize) {
+                defaultSizeKey = Object.keys(sizeOptions)[0];
+                defaultPrice = sizeOptions[defaultSizeKey];
+            }
+            const card = document.createElement('div');
+            card.className = 'menu-card';
+            // 若有圖片網址則顯示，否則不顯示圖片區塊
+            const imgHtml = item.image_url ? `<img class="menu-img" src="${item.image_url}" alt="${item.name}">` : '<div class="menu-img" style="background:#e9ecef; display:flex; align-items:center; justify-content:center; color:#aaa;">無圖片</div>';
+            card.innerHTML = `
+                ${imgHtml}
+                <div class="menu-info">
+                    <div class="menu-name">${escapeHtml(item.name)}</div>
+                    <div class="menu-desc">${escapeHtml(item.description || '')}</div>
+                    ${hasSize ? `
+                        <div class="size-selector">
+                            <select class="item-size" data-id="${item.id}">
+                                ${Object.entries(sizeOptions).map(([size, p]) => `<option value="${size}" data-price="${p}">${size} +${p}元</option>`).join('')}
+                            </select>
+                        </div>
+                    ` : ''}
+                    <div class="price" id="price-${item.id}">NT$ ${hasSize ? defaultPrice : item.price}</div>
+                    <div class="qty-control">
+                        <button class="qty-minus" data-id="${item.id}">−</button>
+                        <input type="number" class="qty-num" id="qty-${item.id}" value="1" min="1" step="1">
+                        <button class="qty-plus" data-id="${item.id}">+</button>
+                    </div>
+                    <button class="add-to-cart" data-id="${item.id}">加入購物車</button>
+                </div>
+            `;
+            container.appendChild(card);
+            // 綁定規格變更價格
+            if (hasSize) {
+                const select = card.querySelector('.item-size');
+                select.addEventListener('change', () => {
+                    const selected = select.options[select.selectedIndex];
+                    const newPrice = parseInt(selected.dataset.price);
+                    document.getElementById(`price-${item.id}`).innerText = `NT$ ${newPrice}`;
+                });
+            }
+            // 數量按鈕
+            const minus = card.querySelector('.qty-minus');
+            const plus = card.querySelector('.qty-plus');
+            const qtyInput = card.querySelector('.qty-num');
+            minus.addEventListener('click', () => { let v = parseInt(qtyInput.value); if(v>1) qtyInput.value = v-1; });
+            plus.addEventListener('click', () => { let v = parseInt(qtyInput.value); qtyInput.value = v+1; });
+            // 加入購物車
+            const addBtn = card.querySelector('.add-to-cart');
+            addBtn.addEventListener('click', () => {
+                let selectedSize = null;
+                let unitPrice = item.price;
+                if (hasSize) {
+                    const select = card.querySelector('.item-size');
+                    selectedSize = select.value;
+                    unitPrice = parseInt(select.options[select.selectedIndex].dataset.price);
+                }
+                const quantity = parseInt(qtyInput.value);
+                addToCart(item.id, item.name, selectedSize, unitPrice, quantity, item.image_url);
+            });
+        });
+    }
+
+    function addToCart(menuId, name, size, unitPrice, qty, img) {
+        const existing = cart.find(c => c.menuId === menuId && c.size === size);
+        if (existing) {
+            existing.quantity += qty;
+        } else {
+            cart.push({ menuId, name, size: size || '標準', unitPrice, quantity: qty, image: img });
+        }
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        const cartDiv = document.getElementById('cartItemsList');
+        let total = 0;
+        let totalQty = 0;
+        cartDiv.innerHTML = '';
+        cart.forEach((item, idx) => {
+            const itemTotal = item.unitPrice * item.quantity;
+            total += itemTotal;
+            totalQty += item.quantity;
+            const div = document.createElement('div');
+            div.className = 'cart-item';
+            div.innerHTML = `
+                <div><strong>${escapeHtml(item.name)}</strong> ${item.size ? `(${item.size})` : ''}<br>NT$ ${item.unitPrice} x ${item.quantity}</div>
+                <div>NT$ ${itemTotal} <button class="remove-item" data-index="${idx}">🗑️</button></div>
+            `;
+            cartDiv.appendChild(div);
+        });
+        document.querySelectorAll('.remove-item').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.dataset.index);
+                cart.splice(idx, 1);
+                updateCartUI();
+            });
+        });
+        document.getElementById('cartTotalAmount').innerText = total;
+        document.getElementById('cartCountBadge').innerText = totalQty;
+    }
+
+    async function submitOrder() {
+        const name = document.getElementById('customerName').value.trim();
+        const phone = document.getElementById('customerPhone').value.trim();
+        const note = document.getElementById('orderNote').value;
+        if (!name || !phone) { alert('請填寫姓名和電話'); return; }
+        if (cart.length === 0) { alert('購物車是空的'); return; }
+        const itemsForApi = cart.map(c => ({ name: c.name, size: c.size, quantity: c.quantity, unit_price: c.unitPrice, total: c.unitPrice * c.quantity }));
+        const totalAmount = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+        try {
+            const res = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    manager_id: storeInfo.id,
+                    customer_name: name,
+                    customer_phone: phone,
+                    items: itemsForApi,
+                    total_amount: totalAmount,
+                    note: note
+                })
+            });
+            if (!res.ok) throw new Error('訂單送出失敗');
+            alert('訂單送出成功！店家將盡快處理。');
+            cart = [];
+            updateCartUI();
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('orderNote').value = '';
+            document.getElementById('cartSidebar').classList.remove('open');
+        } catch(err) {
+            alert('送出失敗: ' + err.message);
+        }
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+
+    // 側邊欄控制
+    const fab = document.getElementById('cartFab');
+    const sidebar = document.getElementById('cartSidebar');
+    fab.addEventListener('click', () => sidebar.classList.add('open'));
+    document.getElementById('closeCartBtn').addEventListener('click', () => sidebar.classList.remove('open'));
+    document.getElementById('submitOrderBtn').addEventListener('click', submitOrder);
+
+    (async () => {
+        const mgrId = await fetchStoreInfo();
+        if (mgrId) await fetchMenu();
+    })();
+</script>
+</body>
+</html>

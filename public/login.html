@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>登入 - 餐廳點餐系統</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 440px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+        .login-header {
+            background: white;
+            padding: 32px 24px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        .login-header h1 {
+            font-size: 1.8rem;
+            color: #005F73;
+            margin-bottom: 8px;
+        }
+        .login-header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .login-body { padding: 32px 28px; }
+        .form-group { margin-bottom: 24px; }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #005F73;
+        }
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 28px;
+            font-size: 1rem;
+            transition: 0.2s;
+            outline: none;
+        }
+        input:focus {
+            border-color: #005F73;
+            box-shadow: 0 0 0 3px rgba(0,95,115,0.1);
+        }
+        .login-btn {
+            width: 100%;
+            background: #005F73;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 12px;
+        }
+        .login-btn:hover { background: #004a5a; transform: translateY(-2px); }
+        .register-link {
+            text-align: center;
+            margin-top: 24px;
+            color: #666;
+        }
+        .register-link a {
+            color: #005F73;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .forgot-link {
+            text-align: center;
+            margin-top: 16px;
+        }
+        .forgot-link a {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .forgot-link a:hover {
+            color: #005F73;
+            text-decoration: underline;
+        }
+        .error-msg {
+            background: #fee;
+            color: #c00;
+            padding: 12px;
+            border-radius: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-header">
+        <h1>🍽️ 餐廳管理系統</h1>
+        <p>店長 / 超級管理員 登入</p>
+    </div>
+    <div class="login-body">
+        <div class="error-msg" id="errorMsg"></div>
+        <div class="form-group">
+            <label>帳號</label>
+            <input type="text" id="username" placeholder="請輸入帳號" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label>密碼</label>
+            <input type="password" id="password" placeholder="請輸入密碼">
+        </div>
+        <button class="login-btn" id="loginBtn">登入</button>
+        <div class="register-link">
+            還沒有店長帳號？ <a href="register.html">立即註冊</a>
+        </div>
+        <div class="forgot-link">
+            <a href="forgot-password.html">忘記密碼？</a>
+        </div>
+    </div>
+</div>
+<script>
+    const loginBtn = document.getElementById('loginBtn');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const errorDiv = document.getElementById('errorMsg');
+
+    loginBtn.addEventListener('click', async () => {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        if (!username || !password) { showError('請填寫帳號和密碼'); return; }
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '登入失敗');
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('userRole', data.user.role);
+            localStorage.setItem('userId', data.user.id);
+            if (data.user.role === 'admin') window.location.href = 'admin.html';
+            else if (data.user.role === 'manager' || data.user.role === 'subuser') window.location.href = 'manager.html';
+            else throw new Error('未知角色');
+        } catch (err) { showError(err.message); }
+    });
+
+    function showError(msg) {
+        errorDiv.textContent = msg;
+        errorDiv.style.display = 'block';
+        setTimeout(() => errorDiv.style.display = 'none', 3000);
+    }
+    usernameInput.addEventListener('keypress', e => { if (e.key === 'Enter') loginBtn.click(); });
+    passwordInput.addEventListener('keypress', e => { if (e.key === 'Enter') loginBtn.click(); });
+</script>
+</body>
+</html>
