@@ -82,9 +82,7 @@
         <button class="logout-btn" id="logoutBtn">登出</button>
     </div>
 
-    <div class="tabs" id="tabsContainer">
-        <!-- 店長才能看到的頁籤會動態生成，子帳號只顯示訂單頁籤 -->
-    </div>
+    <div class="tabs" id="tabsContainer"></div>
 
     <!-- 店鋪設定 (僅店長) -->
     <div id="settingsPane" class="tab-pane">
@@ -119,7 +117,7 @@
         </div>
     </div>
 
-    <!-- 訂單管理 & 營業額 (店長與子帳號都可見) -->
+    <!-- 訂單管理 & 營業額 (店長與子帳號都可見，且子帳號也可更新狀態) -->
     <div id="ordersPane" class="tab-pane">
         <div class="form-card">
             <h3>📊 今日營業額</h3>
@@ -135,7 +133,7 @@
                 <option value="completed">已完成</option>
                 <option value="cancelled">已取消</option>
             </select>
-            <table class="data-table"><thead><tr><th>編號</th><th>顧客</th><th>電話</th><th>品項</th><th>總金額</th><th>狀態</th><th>備註</th><th>時間</th><th>操作</th></tr></thead><tbody id="orderTableBody"></tbody></table>
+            <table class="data-table"><thead><tr><th>編號</th><th>顧客</th><th>電話</th><th>品項</th><th>總金額</th><th>狀態</th><th>備註</th><th>時間</th><th>操作</th></tr></thead><tbody id="orderTableBody"></tbody></td>
         </div>
     </div>
 
@@ -196,7 +194,6 @@
 
     async function verifyToken() {
         try {
-            // 先嘗試獲取店鋪設定（子帳號也可以獲取，因為後端會轉成 manager_id）
             const res = await fetch('/api/manager/settings', { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!res.ok) throw new Error(`驗證失敗 (${res.status})`);
             // 載入共用資料（訂單、營業額）
@@ -211,9 +208,8 @@
                 await loadPayments();
                 renderTabsForManager();
             } else {
-                // 子帳號：只顯示訂單頁籤，並隱藏其他操作按鈕
+                // 子帳號：只顯示訂單頁籤
                 renderTabsForSubuser();
-                // 子帳號不需要加載店鋪設定、菜單等，但為了避免變數未定義，提供空函數
             }
             attachEventListeners();
         } catch (err) { console.error(err); alert('載入失敗: ' + err.message); }
@@ -228,7 +224,6 @@
             <button class="tab-btn" data-tab="subusers">👥 子帳號</button>
             <button class="tab-btn" data-tab="bank">🏦 銀行 & 繳費紀錄</button>
         `;
-        // 預設顯示店鋪設定頁籤
         document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
         document.getElementById('settingsPane').classList.add('active');
         attachTabEvents();
@@ -352,7 +347,7 @@
         if (res.ok) loadMenu(); else alert('更新失敗');
     }
 
-    // ========== 訂單相關 (店長和子帳號共用) ==========
+    // ========== 訂單相關 (店長和子帳號共用，且子帳號也可更新) ==========
     async function loadOrders() {
         const res = await fetch('/api/manager/orders', { headers: { 'Authorization': `Bearer ${authToken}` } });
         let orders = await res.json();
@@ -362,8 +357,8 @@
         tbody.innerHTML = '';
         orders.forEach(order => {
             const itemsShort = order.items.map(i => `${i.name} x${i.quantity}`).join(', ');
-            // 只有店長可以更新訂單狀態
-            const canUpdate = (currentUserRole === 'manager' && order.status !== 'completed' && order.status !== 'cancelled');
+            // ✅ 修改：子帳號也可以更新訂單狀態（只要訂單未完成/未取消）
+            const canUpdate = (order.status !== 'completed' && order.status !== 'cancelled');
             const statusClass = `status-${order.status}`;
             const statusText = {pending:'待處理', accepted:'已接單', completed:'已完成', cancelled:'已取消'}[order.status];
             const row = `<tr>
@@ -371,7 +366,8 @@
                 <td>${escapeHtml(order.customer_name)}</td><td>${order.customer_phone}</td>
                 <td>${itemsShort.substring(0,60)}</td><td>NT$ ${order.total_amount}</td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>${escapeHtml(order.note || '')}</td><td>${new Date(order.created_at).toLocaleString()}</td>
+                <td>${escapeHtml(order.note || '')}</td>
+                <td>${new Date(order.created_at).toLocaleString()}</td>
                 <td>${canUpdate ? `<select class="status-select" data-id="${order.id}"><option value="accepted">接單</option><option value="completed">完成</option><option value="cancelled">取消</option></select><button class="small update-status">更新</button>` : '無權限'} </td>
             </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
@@ -451,7 +447,8 @@
         records.forEach(rec => {
             const statusText = rec.status === 'pending' ? '待確認' : '已收款';
             const row = `<tr>
-                <td>${rec.date}</td><td>NT$ ${rec.amount}</td><td>${rec.account_last5}</td>
+                <td>${rec.date}</td>
+                <td>NT$ ${rec.amount}</td><td>${rec.account_last5}</td>
                 <td>${statusText}</td><td>${new Date(rec.created_at).toLocaleString()}</td><td>${rec.confirmed_at ? new Date(rec.confirmed_at).toLocaleString() : '-'}</td>
             </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
@@ -479,12 +476,9 @@
     }
 
     function attachEventListeners() {
-        // 登出
         document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/login.html'; });
-        // 訂單篩選
         document.getElementById('orderStatusFilter')?.addEventListener('change', loadOrders);
         document.getElementById('refreshSalesBtn')?.addEventListener('click', loadDailySales);
-        // 店長專屬按鈕
         if (currentUserRole === 'manager') {
             document.getElementById('saveSettingsBtn')?.addEventListener('click', saveStoreSettings);
             document.getElementById('addMenuItemBtn')?.addEventListener('click', addMenuItem);
