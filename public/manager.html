@@ -133,19 +133,7 @@
                 <option value="completed">已完成</option>
                 <option value="cancelled">已取消</option>
             </select>
-            <table class="data-table"><thead><tr><th>編號</th><th>顧客</th><th>電話</th><th>品項</th><th>總金額</th><th>狀態</th><th>備註</th><th>時間</th><th>操作</th></tr></thead><tbody id="orderTableBody"></tbody></td>
-        </div>
-    </div>
-
-    <!-- 子帳號管理 (僅店長) -->
-    <div id="subusersPane" class="tab-pane">
-        <div class="form-card">
-            <h3>👥 新增子帳號 (最多3個，僅可查看)</h3>
-            <div class="flex-row"><input type="text" id="subUsername" placeholder="帳號"><input type="password" id="subPassword" placeholder="密碼"><button id="createSubUserBtn">建立子帳號</button></div>
-        </div>
-        <div class="form-card">
-            <h3>📋 現有子帳號</h3>
-            <table class="data-table"><thead><tr><th>用戶名</th><th>建立時間</th><th>操作</th></tr></thead><tbody id="subuserList"></tbody></table>
+            <table class="data-table"><thead><tr><th>編號</th><th>顧客</th><th>電話</th><th>品項</th><th>總金額</th><th>狀態</th><th>備註</th><th>時間</th><th>操作</th></tr></thead><tbody id="orderTableBody"></tbody></table>
         </div>
     </div>
 
@@ -162,7 +150,7 @@
                 <div class="flex-row"><input type="date" id="paymentDate"><input type="number" id="paymentAmount" placeholder="金額"><input type="text" id="paymentLast5" placeholder="帳號後五碼" maxlength="5"><button id="addPaymentBtn">新增紀錄</button></div>
             </div>
             <h4>📜 繳費紀錄列表</h4>
-            <table class="data-table"><thead><tr><th>日期</th><th>金額</th><th>帳號後五碼</th><th>狀態</th><th>送出時間</th><th>確認時間</th></tr></thead><tbody id="paymentRecordsList"></tbody></table>
+            <table class="data-table"><thead><tr><th>日期</th><th>金額</th><th>帳號後五碼</th><th>狀態</th><th>送出時間</th><th>確認時間</th><tr></thead><tbody id="paymentRecordsList"></tbody></table>
         </div>
     </div>
 </div>
@@ -203,7 +191,6 @@
             if (currentUserRole === 'manager') {
                 await loadStoreSettings();
                 await loadMenu();
-                await loadSubUsers();
                 await loadBankInfo();
                 await loadPayments();
                 renderTabsForManager();
@@ -221,7 +208,6 @@
             <button class="tab-btn active" data-tab="settings">🏪 店鋪設定</button>
             <button class="tab-btn" data-tab="menu">📋 菜單管理</button>
             <button class="tab-btn" data-tab="orders">📦 訂單 & 營業額</button>
-            <button class="tab-btn" data-tab="subusers">👥 子帳號</button>
             <button class="tab-btn" data-tab="bank">🏦 銀行 & 繳費紀錄</button>
         `;
         document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
@@ -357,14 +343,15 @@
         tbody.innerHTML = '';
         orders.forEach(order => {
             const itemsShort = order.items.map(i => `${i.name} x${i.quantity}`).join(', ');
-            // ✅ 修改：子帳號也可以更新訂單狀態（只要訂單未完成/未取消）
             const canUpdate = (order.status !== 'completed' && order.status !== 'cancelled');
             const statusClass = `status-${order.status}`;
             const statusText = {pending:'待處理', accepted:'已接單', completed:'已完成', cancelled:'已取消'}[order.status];
             const row = `<tr>
                 <td>#${order.id}</td>
-                <td>${escapeHtml(order.customer_name)}</td><td>${order.customer_phone}</td>
-                <td>${itemsShort.substring(0,60)}</td><td>NT$ ${order.total_amount}</td>
+                <td>${escapeHtml(order.customer_name)}</td>
+                <td>${order.customer_phone}</td>
+                <td>${itemsShort.substring(0,60)}</td>
+                <td>NT$ ${order.total_amount}</td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 <td>${escapeHtml(order.note || '')}</td>
                 <td>${new Date(order.created_at).toLocaleString()}</td>
@@ -394,42 +381,6 @@
         document.getElementById('dailySales').innerHTML = `NT$ ${data.total} <small style="font-size:0.9rem;">(${data.date})</small>`;
     }
 
-    // ========== 子帳號管理 (僅店長) ==========
-    async function loadSubUsers() {
-        if (currentUserRole !== 'manager') return;
-        const res = await fetch('/api/manager/subusers', { headers: { 'Authorization': `Bearer ${authToken}` } });
-        const users = await res.json();
-        const tbody = document.getElementById('subuserList');
-        tbody.innerHTML = '';
-        users.forEach(u => {
-            const row = `<tr>
-                <td>${escapeHtml(u.username)}</td><td>${new Date(u.created_at).toLocaleString()}</td>
-                <td><button class="small danger del-subuser" data-id="${u.id}">刪除</button></td>
-            </tr>`;
-            tbody.insertAdjacentHTML('beforeend', row);
-        });
-        document.querySelectorAll('.del-subuser').forEach(btn => btn.addEventListener('click', deleteSubUser));
-    }
-
-    async function createSubUser() {
-        const username = document.getElementById('subUsername').value;
-        const password = document.getElementById('subPassword').value;
-        if (!username || !password) return alert('請填寫完整');
-        const res = await fetch('/api/manager/subusers', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ username, password })
-        });
-        if (res.ok) { alert('子帳號建立成功'); loadSubUsers(); } else alert('建立失敗');
-    }
-
-    async function deleteSubUser(e) {
-        const id = e.target.dataset.id;
-        if (!confirm('確定刪除子帳號？')) return;
-        const res = await fetch(`/api/manager/subusers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
-        if (res.ok) loadSubUsers(); else alert('刪除失敗');
-    }
-
     // ========== 銀行與繳費 (僅店長) ==========
     async function loadBankInfo() {
         if (currentUserRole !== 'manager') return;
@@ -448,8 +399,11 @@
             const statusText = rec.status === 'pending' ? '待確認' : '已收款';
             const row = `<tr>
                 <td>${rec.date}</td>
-                <td>NT$ ${rec.amount}</td><td>${rec.account_last5}</td>
-                <td>${statusText}</td><td>${new Date(rec.created_at).toLocaleString()}</td><td>${rec.confirmed_at ? new Date(rec.confirmed_at).toLocaleString() : '-'}</td>
+                <td>NT$ ${rec.amount}</td>
+                <td>${rec.account_last5}</td>
+                <td>${statusText}</td>
+                <td>${new Date(rec.created_at).toLocaleString()}</td>
+                <td>${rec.confirmed_at ? new Date(rec.confirmed_at).toLocaleString() : '-'}</td>
             </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
         });
@@ -482,7 +436,6 @@
         if (currentUserRole === 'manager') {
             document.getElementById('saveSettingsBtn')?.addEventListener('click', saveStoreSettings);
             document.getElementById('addMenuItemBtn')?.addEventListener('click', addMenuItem);
-            document.getElementById('createSubUserBtn')?.addEventListener('click', createSubUser);
             document.getElementById('addPaymentBtn')?.addEventListener('click', addPayment);
         }
     }

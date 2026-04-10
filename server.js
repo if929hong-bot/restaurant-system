@@ -219,7 +219,7 @@ app.put('/api/admin/payments/:id/confirm', authenticateToken, adminOnly, (req, r
   });
 });
 
-// ========== 店长及子账号API ==========
+// ========== 店长及子账号API（移除子账号管理路由，保留基本功能） ==========
 // 获取店长设置（含地图、电话、LINE）
 app.get('/api/manager/settings', authenticateToken, managerOrSubuser, (req, res) => {
   db.get('SELECT logo_url, restaurant_name, background_image_url, map_url, phone, line_url FROM store_settings WHERE manager_id = ?', [req.manager_id], (err, settings) => {
@@ -298,7 +298,7 @@ app.get('/api/manager/orders', authenticateToken, managerOrSubuser, (req, res) =
   });
 });
 
-// ✅ 修改：允许子账号更新订单状态（移除角色限制，只保留身份验证和所属店长验证）
+// 允许子账号更新订单状态
 app.put('/api/manager/orders/:id/status', authenticateToken, managerOrSubuser, (req, res) => {
   const { status } = req.body;
   if (!['pending', 'accepted', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: '无效状态' });
@@ -318,46 +318,8 @@ app.get('/api/manager/daily-sales', authenticateToken, managerOrSubuser, (req, r
   });
 });
 
-app.get('/api/manager/subusers', authenticateToken, (req, res, next) => {
-  if (req.user.role !== 'manager') return res.status(403).json({ error: '只有店长可以管理子账号' });
-  next();
-}, managerOrSubuser, (req, res) => {
-  db.all('SELECT id, username, created_at FROM users WHERE role = "subuser" AND manager_id = ?', [req.manager_id], (err, users) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(users);
-  });
-});
-
-app.post('/api/manager/subusers', authenticateToken, (req, res, next) => {
-  if (req.user.role !== 'manager') return res.status(403).json({ error: '只有店长可以创建子账号' });
-  next();
-}, managerOrSubuser, async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: '用户名和密码不能为空' });
-  db.get('SELECT COUNT(*) as count FROM users WHERE role = "subuser" AND manager_id = ?', [req.manager_id], async (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (row.count >= 3) return res.status(400).json({ error: '子账号最多只能创建3个' });
-    db.get('SELECT id FROM users WHERE username = ?', [username], async (err, exist) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (exist) return res.status(400).json({ error: '用户名已存在' });
-      const hashedPwd = await bcrypt.hash(password, 10);
-      db.run('INSERT INTO users (username, password, role, manager_id, is_active) VALUES (?, ?, ?, ?, ?)', [username, hashedPwd, 'subuser', req.manager_id, 1], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: this.lastID, username, message: '子账号创建成功' });
-      });
-    });
-  });
-});
-
-app.delete('/api/manager/subusers/:id', authenticateToken, (req, res, next) => {
-  if (req.user.role !== 'manager') return res.status(403).json({ error: '只有店长可以删除子账号' });
-  next();
-}, managerOrSubuser, (req, res) => {
-  db.run('DELETE FROM users WHERE id = ? AND role = "subuser" AND manager_id = ?', [req.params.id, req.manager_id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: '子账号已删除' });
-  });
-});
+// 注意：以下子账号管理路由已完全移除（GET /api/manager/subusers, POST, DELETE）
+// 店长无法再通过后台管理子账号，但已有的子账号仍可登录并使用订单功能
 
 app.get('/api/manager/bank-info', authenticateToken, managerOrSubuser, (req, res) => {
   db.get('SELECT bank_info FROM global_bank_info WHERE id = 1', (err, row) => {
