@@ -139,7 +139,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const expires = Date.now() + 3600000; // 1 小时有效
     db.run('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?', [token, expires, user.id], (err) => {
       if (err) return res.status(500).json({ error: err.message });
-      // 直接返回 token，前端跳转到重置页面
       res.json({ token });
     });
   });
@@ -229,7 +228,7 @@ app.get('/api/manager/settings', authenticateToken, managerOrSubuser, (req, res)
   });
 });
 
-// 修改店长设置（含地图、电话、LINE）
+// 修改店长设置（只有店长可以）
 app.put('/api/manager/settings', authenticateToken, (req, res, next) => {
   if (req.user.role !== 'manager') return res.status(403).json({ error: '只有店长可以修改设置' });
   next();
@@ -299,10 +298,8 @@ app.get('/api/manager/orders', authenticateToken, managerOrSubuser, (req, res) =
   });
 });
 
-app.put('/api/manager/orders/:id/status', authenticateToken, (req, res, next) => {
-  if (req.user.role !== 'manager') return res.status(403).json({ error: '只有店长可以修改订单状态' });
-  next();
-}, managerOrSubuser, (req, res) => {
+// ✅ 修改：允许子账号更新订单状态（移除角色限制，只保留身份验证和所属店长验证）
+app.put('/api/manager/orders/:id/status', authenticateToken, managerOrSubuser, (req, res) => {
   const { status } = req.body;
   if (!['pending', 'accepted', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: '无效状态' });
   db.run('UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND manager_id = ?', [status, req.params.id, req.manager_id], function(err) {
