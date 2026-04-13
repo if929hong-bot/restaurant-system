@@ -52,6 +52,18 @@ function managerOrSubuser(req, res, next) {
 }
 
 // ========== 公共API（顾客端） ==========
+// 取得所有已啟用的店家列表（供首頁展示）
+app.get('/api/stores', (req, res) => {
+  db.all(`SELECT u.username, s.restaurant_name, s.logo_url, s.background_image_url 
+          FROM users u 
+          LEFT JOIN store_settings s ON u.id = s.manager_id 
+          WHERE u.role = 'manager' AND u.is_active = 1 
+          ORDER BY u.created_at DESC`, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 app.get('/api/menu/:managerUsername', (req, res) => {
   const { managerUsername } = req.params;
   db.get('SELECT id FROM users WHERE username = ? AND role = "manager" AND is_active = 1', [managerUsername], (err, manager) => {

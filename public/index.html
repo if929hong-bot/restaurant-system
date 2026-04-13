@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>餐廳點餐系統</title>
+    <title>餐廳點餐系統 - 選擇餐廳</title>
     <style>
         * {
             margin: 0;
@@ -12,105 +12,154 @@
         }
         body {
             font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
-            background: white;
+            background: #f8fafc;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
         }
         .container {
-            max-width: 600px;
-            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
             text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
         }
-        .logo {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-        h1 {
-            font-size: 2rem;
+        .header h1 {
+            font-size: 2.5rem;
             color: #023047;
             margin-bottom: 12px;
         }
-        .subtitle {
+        .header p {
             color: #4a627a;
-            margin-bottom: 40px;
-            font-size: 1rem;
+            font-size: 1.1rem;
         }
-        .card-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+        .restaurant-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 28px;
         }
-        .card {
+        .restaurant-card {
             background: white;
-            border: 1px solid #e2e8f0;
             border-radius: 32px;
-            padding: 20px 24px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
             text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            color: inherit;
+            display: block;
         }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 20px rgba(0,0,0,0.08);
-            border-color: #cbd5e1;
+        .restaurant-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 30px -12px rgba(0,0,0,0.2);
         }
-        .card-info {
-            text-align: left;
+        .card-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #e2e8f0;
         }
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 600;
+        .card-content {
+            padding: 20px;
+        }
+        .restaurant-name {
+            font-size: 1.4rem;
+            font-weight: 700;
             color: #023047;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
-        .card-desc {
+        .restaurant-username {
+            color: #6c757d;
             font-size: 0.85rem;
-            color: #5b6e8c;
+            margin-bottom: 12px;
         }
-        .card-arrow {
-            font-size: 1.5rem;
-            color: #023047;
+        .order-btn {
+            display: inline-block;
+            background: #ff6b35;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 12px;
+            transition: 0.2s;
         }
-        @media (max-width: 480px) {
-            .card { padding: 16px; }
-            .card-title { font-size: 1rem; }
+        .restaurant-card:hover .order-btn {
+            background: #e55a2b;
+        }
+        .loading, .empty {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+        @media (max-width: 640px) {
+            .restaurant-grid { gap: 16px; }
+            .header h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="logo">🍽️</div>
-    <h1>餐廳點餐系統</h1>
-    <div class="subtitle">快速連結</div>
-    <div class="card-grid">
-        <a href="order.html?store=demo_restaurant" class="card">
-            <div class="card-info">
-                <div class="card-title">顧客點餐</div>
-                <div class="card-desc">瀏覽菜單、加入購物車、送出訂單</div>
-            </div>
-            <div class="card-arrow">→</div>
-        </a>
-        <a href="login.html" class="card">
-            <div class="card-info">
-                <div class="card-title">店長 / 管理員登入</div>
-                <div class="card-desc">登入後台管理訂單、菜單、店鋪設定</div>
-            </div>
-            <div class="card-arrow">→</div>
-        </a>
-        <a href="register.html" class="card">
-            <div class="card-info">
-                <div class="card-title">店長註冊</div>
-                <div class="card-desc">申請成為合作店家，等待審核</div>
-            </div>
-            <div class="card-arrow">→</div>
-        </a>
+    <div class="header">
+        <h1>🍽️ 線上點餐</h1>
+        <p>選擇您喜愛的餐廳，開始點餐</p>
+    </div>
+    <div id="restaurantList" class="restaurant-grid">
+        <div class="loading">載入餐廳列表中...</div>
+    </div>
+    <div class="footer">
+        <p>© 2025 餐廳點餐系統 | 店家進駐請聯繫管理員</p>
     </div>
 </div>
+
+<script>
+    async function loadStores() {
+        const container = document.getElementById('restaurantList');
+        try {
+            const res = await fetch('/api/stores');
+            if (!res.ok) throw new Error('無法載入店家資料');
+            const stores = await res.json();
+            if (stores.length === 0) {
+                container.innerHTML = '<div class="empty">目前尚無合作餐廳，請稍後再來 😊</div>';
+                return;
+            }
+            container.innerHTML = '';
+            stores.forEach(store => {
+                const card = document.createElement('a');
+                card.className = 'restaurant-card';
+                card.href = `order.html?store=${encodeURIComponent(store.username)}`;
+                // 背景圖片優先使用店家設定的背景，若無則使用預設
+                const bgImage = store.background_image_url || 'https://picsum.photos/id/20/400/200';
+                card.innerHTML = `
+                    <img class="card-img" src="${bgImage}" alt="${escapeHtml(store.restaurant_name)}">
+                    <div class="card-content">
+                        <div class="restaurant-name">${escapeHtml(store.restaurant_name || store.username)}</div>
+                        <div class="restaurant-username">@${escapeHtml(store.username)}</div>
+                        <div class="order-btn">立即點餐 →</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = '<div class="empty">載入失敗，請稍後再試</div>';
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
+    }
+
+    loadStores();
+</script>
 </body>
 </html>
