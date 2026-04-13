@@ -75,7 +75,7 @@ db.serialize(() => {
     FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
 
-  // 全局银行信息表
+  // 全局银行信息表（預設值已修改）
   db.run(`CREATE TABLE IF NOT EXISTS global_bank_info (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     bank_info TEXT NOT NULL,
@@ -85,7 +85,7 @@ db.serialize(() => {
       db.get('SELECT id FROM global_bank_info WHERE id = 1', (err, row) => {
         if (!err && !row) {
           db.run('INSERT INTO global_bank_info (id, bank_info) VALUES (1, ?)',
-            ['银行：XX银行 帐号：1234-5678-9012 户名：XX餐饮管理有限公司']);
+            ['银行：華南銀行\n帳號：500200-700406\n戶名：洪語涵']);
         }
       });
     }
