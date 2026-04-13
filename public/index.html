@@ -24,6 +24,7 @@
             text-align: center;
             margin-bottom: 40px;
             padding: 40px 20px;
+            position: relative;
         }
         .header h1 {
             font-size: 2.5rem;
@@ -33,6 +34,29 @@
         .header p {
             color: #4a627a;
             font-size: 1.1rem;
+        }
+        .admin-links {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 16px;
+        }
+        .admin-links a {
+            background: white;
+            color: #023047;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .admin-links a:hover {
+            background: #f1f5f9;
+            transform: translateY(-2px);
         }
         .restaurant-grid {
             display: grid;
@@ -103,12 +127,18 @@
         @media (max-width: 640px) {
             .restaurant-grid { gap: 16px; }
             .header h1 { font-size: 1.8rem; }
+            .admin-links { position: static; justify-content: center; margin-bottom: 20px; }
+            .header { padding-top: 20px; }
         }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
+        <div class="admin-links">
+            <a href="login.html">🔐 店長登入</a>
+            <a href="register.html">📝 店長註冊</a>
+        </div>
         <h1>🍽️ 線上點餐</h1>
         <p>選擇您喜愛的餐廳，開始點餐</p>
     </div>
@@ -136,7 +166,6 @@
                 const card = document.createElement('a');
                 card.className = 'restaurant-card';
                 card.href = `order.html?store=${encodeURIComponent(store.username)}`;
-                // 背景圖片優先使用店家設定的背景，若無則使用預設
                 const bgImage = store.background_image_url || 'https://picsum.photos/id/20/400/200';
                 card.innerHTML = `
                     <img class="card-img" src="${bgImage}" alt="${escapeHtml(store.restaurant_name)}">
